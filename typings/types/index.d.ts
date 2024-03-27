@@ -35,7 +35,9 @@ interface IConnectOption {
  */
 declare enum EErrorCode {
   Timeout = 0x0001,
-
+  NotFound = 0x0002,
+  Disconnected = 0x0003,
+  NotAvailable = 0x0004,
 }
 
 /**
@@ -43,5 +45,5 @@ declare enum EErrorCode {
  */
 interface IError {
   code: number | EErrorCode
-  desc?: string
+  message?: string
 }
