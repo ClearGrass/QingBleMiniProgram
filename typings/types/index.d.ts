@@ -65,3 +65,13 @@ interface IQingBlueToothDevice {
   // 广播数据
   broadcastData: string;
 }
+
+
+interface ICommand {
+  // 命令字
+  type: number;
+  // uuid
+  
+  // 数据
+  data: number[];
+}

@@ -28,13 +28,20 @@ export class QingBleService {
   private currentDevice: IQingBlueToothDevice | null = null;
   private isConnected: boolean = false;
   private print = (...args: any) => helper.log(QingBleService.LogTag, ...args);
+  // 待onBLECharacteristicValueChange方法处理的的命令map
+  private commandMap: Map<string, (data: ArrayBuffer) => void> = new Map();
+
 
   // 扫描到符合targetDeviceOption设备后的回调
   private scanResolve: ((value: IQingBlueToothDevice | IError) => void) | null =
     null;
 
   private onConnectStatusChange:
-    | ((step: EConnectStep, status: EConnectStepStatus, device: IQingBlueToothDevice | null) => void)
+    | ((
+        step: EConnectStep,
+        status: EConnectStepStatus,
+        device: IQingBlueToothDevice | null
+      ) => void)
     | null = null;
 
   constructor(
@@ -94,7 +101,7 @@ export class QingBleService {
         this.onConnectStatusChange?.(
           EConnectStep.Scan,
           EConnectStepStatus.Failed,
-          this.currentDevice,
+          this.currentDevice
         );
         throw result;
       }
@@ -102,7 +109,7 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Scan,
         EConnectStepStatus.Success,
-        this.currentDevice,
+        this.currentDevice
       );
 
       // 连接设备
@@ -111,7 +118,7 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Connect,
         EConnectStepStatus.InProgress,
-        this.currentDevice,
+        this.currentDevice
       );
       await wx.createBLEConnection({
         deviceId,
@@ -123,7 +130,7 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Connect,
         EConnectStepStatus.Success,
-        this.currentDevice,
+        this.currentDevice
       );
 
       // 服务监听
@@ -134,7 +141,7 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Connect,
         EConnectStepStatus.Failed,
-        this.currentDevice,
+        this.currentDevice
       );
       this.print("连接失败", error);
       throw error;
@@ -152,6 +159,28 @@ export class QingBleService {
   }
 
   /**
+   * 写入数据，这里不传 serviceUUID是因为写入的服务是固定不变的
+   * @param characteristicUUID  写入数据的特征值 UUID
+   * @param type 写入数据的类型
+   * @param data 写入的数据
+   * @returns
+   */
+  private async write(
+    characteristicUUID: string,
+    type: number,
+    data?: ArrayBuffer
+  ) {
+    if (this.isConnected) {
+      return Promise.resolve({
+        errCode: EErrorCode.Disconnected,
+        errMessage: "蓝牙已断开",
+      } as IError);
+    }
+    this.print(`写入数据[${characteristicUUID}]`, type, data);
+    return new Promise(async (resolve) => {});
+  }
+
+  /**
    * 服务监听
    */
   private async startServiceListen() {
@@ -159,7 +188,7 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Subscribe,
         EConnectStepStatus.InProgress,
-        this.currentDevice,
+        this.currentDevice
       );
 
       const services = await wx.getBLEDeviceServices({
@@ -187,13 +216,13 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Subscribe,
         EConnectStepStatus.Success,
-        this.currentDevice,
+        this.currentDevice
       );
     } catch (error) {
       this.onConnectStatusChange?.(
         EConnectStep.Subscribe,
         EConnectStepStatus.Failed,
-        this.currentDevice,
+        this.currentDevice
       );
       this.print("订阅服务失败", error);
       throw error;
@@ -209,7 +238,7 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Scan,
         EConnectStepStatus.InProgress,
-        this.currentDevice,
+        this.currentDevice
       );
       this.print("开始扫描");
       // 保存 resolve 方法
@@ -338,7 +367,7 @@ export class QingBleService {
       this.onConnectStatusChange?.(
         EConnectStep.Connect,
         EConnectStepStatus.Failed,
-        this.currentDevice,
+        this.currentDevice
       );
       this.removeSubscriptions();
     }
@@ -403,6 +432,6 @@ export class QingBleService {
   }
 
   public release() {
-    this.disconnect()
+    this.disconnect();
   }
 }
