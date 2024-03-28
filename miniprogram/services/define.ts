@@ -13,9 +13,10 @@ export enum EQingProductID {
  */
 export enum EErrorCode {
   Timeout = 0x0001,
-  NotFound = 0x0002,
-  Disconnected = 0x0003,
-  NotAvailable = 0x0004,
+  NotFound,
+  Disconnected,
+  NotAvailable,
+  InProgress,
 }
 
 // 连接状态

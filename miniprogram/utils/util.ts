@@ -67,7 +67,7 @@ export function hexString2ArrayArraybuffer(hexString: string | number[]) {
   return arrayBuffer.buffer;
 }
 
-export function uint8Array2hexString(uint8Array: Uint8Array) {
+export function int8Array2hexString(uint8Array: Int8Array) {
   let result = "";
   uint8Array.forEach(
     (d) => (result += d.toString(16).toUpperCase().padStart(2, "0"))

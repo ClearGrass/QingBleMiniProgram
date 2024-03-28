@@ -4,12 +4,18 @@
 
 import { EConnectStep, EConnectStepStatus, EErrorCode } from "@services/define";
 import helper from "@utils/helper";
-import { parseMAC, uint8Array2hexString } from "@utils/util";
+import {
+  int8Array2hexString,
+  parseMAC,
+  uint8Array2hexString,
+} from "@utils/util";
 import { QingUUID } from "./QingUUID";
 import {
   CharValueChangeType,
   ConnectStateChangeType,
+  FormatType,
   IBleDeviceFoundCallback,
+  ICommand,
   IConnectOption,
   IError,
   IQingBlueToothDevice,
@@ -29,8 +35,7 @@ export class QingBleService {
   private isConnected: boolean = false;
   private print = (...args: any) => helper.log(QingBleService.LogTag, ...args);
   // 待onBLECharacteristicValueChange方法处理的的命令map
-  private commandMap: Map<string, (data: ArrayBuffer) => void> = new Map();
-
+  private commandMap: Map<string, ICommand> = new Map();
 
   // 扫描到符合targetDeviceOption设备后的回调
   private scanResolve: ((value: IQingBlueToothDevice | IError) => void) | null =
@@ -158,18 +163,26 @@ export class QingBleService {
     }
   }
 
+  
+
   /**
    * 写入数据，这里不传 serviceUUID是因为写入的服务是固定不变的
    * @param characteristicUUID  写入数据的特征值 UUID
    * @param type 写入数据的类型
    * @param data 写入的数据
+   * @param format 数据格式
+   * @param isSplitReceive 是否分包接收
+   * @param noResponse 是否不需要回复
    * @returns
    */
   private async write(
     characteristicUUID: string,
     type: number,
-    data?: ArrayBuffer
-  ) {
+    format: FormatType,
+    data?: ArrayBuffer,
+    isSplitReceive: boolean = false,
+    noResponse: boolean = false
+  ): Promise<IError | { success: boolean; data: Int8Array }> {
     if (this.isConnected) {
       return Promise.resolve({
         errCode: EErrorCode.Disconnected,
@@ -177,7 +190,63 @@ export class QingBleService {
       } as IError);
     }
     this.print(`写入数据[${characteristicUUID}]`, type, data);
-    return new Promise(async (resolve) => {});
+    const commandKey = `${characteristicUUID}_${type}`;
+    if (this.commandMap.has(commandKey)) {
+      return Promise.resolve({
+        errCode: EErrorCode.InProgress,
+        errMessage: "上一次操作未完成",
+      } as IError);
+    }
+
+    return new Promise(async (resolve) => {
+      // 超时回复
+      const timeoutId = setTimeout(() => {
+        this.commandMap.delete(commandKey);
+        resolve({
+          errCode: EErrorCode.Timeout,
+          errMessage: "写入数据超时",
+        });
+      }, this.timeout);
+      try {
+        if (!noResponse) {
+          this.commandMap.set(commandKey, {
+            type,
+            characteristicId: characteristicUUID,
+            format,
+            timeoutId,
+            isSplitReceive,
+            resolve,
+            receivedData: new Int8Array([]),
+          });
+        }
+
+        let writeData = data ? new Int8Array(data) : new Int8Array([type]);
+        // writeData 前面增加一个字节，用于标识数据长度
+        writeData = new Int8Array([writeData.length, ...writeData]);
+
+        // 写入数据
+        await wx.writeBLECharacteristicValue({
+          deviceId: this.currentDevice!.deviceId,
+          serviceId: QingUUID.DEVICE_BASE_SERVICE_UUID,
+          characteristicId: characteristicUUID,
+          value: writeData.buffer,
+        });
+        // 不需要回复的话就立即返回，比如分包发送的话 只要发送成功就可以了
+        if (noResponse) {
+          clearTimeout(timeoutId);
+          // 这里延迟100毫秒后再返回
+          setTimeout(() => {
+            resolve(true);
+          }, 100);
+        }
+      } catch (error: any) {
+        // 执行失败
+        resolve(error);
+        // 清理定时器
+        clearTimeout(timeoutId);
+        this.commandMap.delete(commandKey);
+      }
+    });
   }
 
   /**
@@ -350,8 +419,72 @@ export class QingBleService {
   /**
    * 蓝牙特征值变化
    */
-  private onBLECharacteristicValueChange(data: CharValueChangeType) {
-    // TODO
+  private onBLECharacteristicValueChange({
+    characteristicId,
+    deviceId,
+    value,
+  }: CharValueChangeType) {
+    if (deviceId !== this.currentDevice?.deviceId) {
+      this.print("onBLECharacteristicValueChange: deviceId 不匹配", deviceId);
+      return;
+    }
+    this.print(
+      "onBLECharacteristicValueChange:",
+      characteristicId,
+      int8Array2hexString(new Int8Array(value))
+    );
+    // value 转换成 Int8Array
+    const valueInt8Array = new Int8Array(value);
+    // valueInt8Array 的数据格式是 1 byte的数据长度 + 1 byte的命令字 + 数据
+    const dataLength = valueInt8Array[0];
+    let type = valueInt8Array[1];
+    let data = valueInt8Array.slice(2, dataLength);
+    if (type === 0xff) {
+      type = valueInt8Array[2];
+      data = valueInt8Array.slice(3);
+    }
+    const commandKey = `${characteristicId}_${type}`;
+    if (!this.commandMap.has(commandKey)) {
+      this.print(
+        `未找到对应的命令:${commandKey}, 已经存命令:${Array.from(
+          this.commandMap.keys()
+        )}`
+      );
+      return;
+    }
+    const command = this.commandMap.get(commandKey)!;
+    if (type === 0xff) {
+      if (data[0] === 0x01) {
+        command.resolve(true);
+      } else {
+        command.resolve(false);
+      }
+      clearTimeout(command.timeoutId);
+      this.commandMap.delete(commandKey);
+      return;
+    }
+    if (command.isSplitReceive) {
+      // 分包接收
+      const total = data[0];
+      const current = data[1];
+      const currentData = data.slice(2);
+      command.receivedData = new Int8Array([
+        ...command.receivedData,
+        ...currentData,
+      ]);
+      if (current < total) {
+        this.commandMap.set(commandKey, command);
+        return;
+      }
+      command.resolve(data);
+      clearTimeout(command.timeoutId);
+      this.commandMap.delete(commandKey);
+    } else {
+      // 非分包接收
+      command.resolve(data);
+      clearTimeout(command.timeoutId);
+      this.commandMap.delete(commandKey);
+    }
   }
 
   private onBLEConnectionStateChange({

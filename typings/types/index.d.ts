@@ -64,7 +64,7 @@ interface IQingBlueToothDevice {
   broadcastData: string;
 }
 
-interface ICommand {
+interface ICommand<T = IError | { success: boolean; data: Int8Array }> {
   // 命令字
   type: number;
   // uuid
@@ -72,8 +72,13 @@ interface ICommand {
   // 是否分包接收
   isSplitReceive?: boolean;
   // 格式化数据
-  format: "hex" | "string";
+  format: FormatType;
+  // 超时定时器 id
+  timeoutId: number;
+  receivedData: Int8Array;
 
-  // 数据
-  data: Int8Array;
+  resolve: (value: T) => void;
 }
+
+// 格式化数据类型
+type FormatType = "hex" | "string";
