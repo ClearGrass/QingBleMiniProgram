@@ -8,6 +8,7 @@ import {
   formatBytes,
   generateToken,
   parseMAC,
+  parseWifiList,
   uint8Array2hexString,
 } from "@utils/util";
 import { QingUUID } from "./QingUUID";
@@ -21,6 +22,7 @@ import {
   IError,
   IQingBlueToothDevice,
   IWechatBlueToothDevice,
+  IWiFiItem,
 } from "typings/types";
 
 /**
@@ -173,7 +175,7 @@ export class QingBleService {
 
       // 获取 Wi-Fi 列表
       const wifiList = await this.getWifiList();
-
+      this.currentDevice.wifiList = wifiList;
       return this.currentDevice;
     } catch (error) {
       this.onConnectStatusChange?.(
@@ -199,20 +201,31 @@ export class QingBleService {
   /**
    * 获取 Wi-Fi 列表
    */
-  public async getWifiList(): Promise<Uint8Array> {
+  public async getWifiList(): Promise<IWiFiItem[]> {
     try {
       const result = await this.write(
-        QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
-        QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
-        0x03,
-        "hex"
+        QingUUID.SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID,
+        QingUUID.SPARROW_GATEWAY_NOTIFY_CHARACTERISTIC_UUID,
+        0x07,
+        "hex",
+        undefined,
+        true
       );
       if ("errCode" in result) {
         this.print("获取 Wi-Fi 列表失败", result);
         throw result;
       }
-      this.print("获取 Wi-Fi 列表成功", formatBytes(result.data, "str"));
-      return result.data;
+      if (!result.success) {
+        this.print("获取 Wi-Fi 列表失败", result);
+        return new Uint8Array();
+      }
+
+      this.print(
+        "获取 Wi-Fi 列表成功",
+        result,
+        formatBytes(result.data, "str")
+      );
+      return parseWifiList(result.data);
     } catch (error) {
       this.print("获取 Wi-Fi 列表失败", error);
       return new Uint8Array();
@@ -525,12 +538,14 @@ export class QingBleService {
     // valueInt8Array 的数据格式是 1 byte的数据长度 + 1 byte的命令字 + 数据
     const dataLength = valueInt8Array[0];
     let type = valueInt8Array[1];
-    let data = valueInt8Array.slice(2, dataLength);
+    let data = valueInt8Array.slice(2);
     if (type === 0xff) {
-      type = valueInt8Array[2];
       data = valueInt8Array.slice(3);
     }
-    const commandKey = `${characteristicId}_${type}`;
+
+    const commandKey = `${characteristicId}_${
+      type === 0xff ? valueInt8Array[2] : type
+    }`;
     if (!this.commandMap.has(commandKey)) {
       this.print(
         `未找到对应的命令:${commandKey}, 已经存命令:${Array.from(
@@ -541,7 +556,7 @@ export class QingBleService {
     }
     const command = this.commandMap.get(commandKey)!;
     if (type === 0xff) {
-      if (data[0] === 0x01) {
+      if (data[0] === 0) {
         command.resolve({ success: true, data });
       } else {
         command.resolve({ success: false, data });

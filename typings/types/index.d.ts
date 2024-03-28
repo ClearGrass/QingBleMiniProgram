@@ -62,6 +62,8 @@ interface IQingBlueToothDevice {
   rawData?: IWechatBlueToothDevice;
   // 广播数据
   broadcastData: string;
+  // wifiList
+  wifiList?: IWiFiItem[];
 }
 
 interface ICommand<T = IError | { success: boolean; data: Uint8Array }> {
@@ -80,3 +82,11 @@ interface ICommand<T = IError | { success: boolean; data: Uint8Array }> {
 
 // 格式化数据类型
 type FormatType = "hex" | "string";
+
+
+// Wi-Fi 
+interface IWiFiItem {
+  name: string;
+  auth: number;
+  rssi: number;
+}

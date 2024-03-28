@@ -2,6 +2,8 @@
  * Created by Tiger on 28/03/2024
  */
 
+import { IWiFiItem } from "typings/types";
+
 export const formatTime = (date: Date) => {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
@@ -173,4 +175,33 @@ export function generateToken(): Int8Array {
     token[i] = Math.floor(Math.random() * 255);
   }
   return token;
+}
+
+/**
+ * 解析 Wi-Fi 列表
+ */
+
+export function parseWifiList(data: Uint8Array): IWiFiItem[] {
+  const wifiStr = formatBytes(data, "str") as string;
+
+  const listWithQuotes = wifiStr.split("\t");
+
+  const wifiList = listWithQuotes
+    .map((item) => {
+      const [name, auth, rssi] = item.split(",");
+      return {
+        name: name.substring(1, name.length - 1),
+        auth: parseInt(auth),
+        rssi: parseInt(rssi),
+      };
+    })
+    .sort(({ rssi: a }, { rssi: b }) => b - a);
+  const names = wifiList.map(({ name }) => name);
+  return wifiList.filter((value, index, self) => {
+    return (
+      names.indexOf(value.name) === index &&
+      value.name &&
+      value.name.trim().length > 0
+    );
+  });
 }

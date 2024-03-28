@@ -5,14 +5,16 @@ import {
 } from "@services/define";
 import helper from "@utils/helper";
 import { QingBleService } from "@services/QingBleService";
-import { IQingBlueToothDevice } from "typings/types";
+import { IQingBlueToothDevice, IWiFiItem } from "typings/types";
 
 interface IConnectPageData {
   connectStatus?: string;
+  wifiList?: IWiFiItem[];
 }
 interface IConnectPageOption {
   LogType: string;
   bleService?: QingBleService;
+  device?: IQingBlueToothDevice;
   print: (...args: any) => void;
   onConnectStatusChange: (
     step: EConnectStep,
@@ -23,7 +25,6 @@ interface IConnectPageOption {
 
 Page<IConnectPageData, IConnectPageOption>({
   LogType: "MainPage",
-
 
   print(...args) {
     helper.log(this.LogType, ...args);
@@ -55,7 +56,7 @@ Page<IConnectPageData, IConnectPageOption>({
         case EConnectStep.Disconnected:
           return "断开连接";
         default:
-          return "unknown"
+          return "unknown";
       }
     };
     switch (status) {
@@ -72,7 +73,9 @@ Page<IConnectPageData, IConnectPageOption>({
     }
 
     this.setData({
-      connectStatus: device ?  `MAC 地址为 ${device.mac} 的设备\n${connectStatus}` : connectStatus,
+      connectStatus: device
+        ? `MAC 地址为 ${device.mac} 的设备\n${connectStatus}`
+        : connectStatus,
     });
   },
 
@@ -84,7 +87,7 @@ Page<IConnectPageData, IConnectPageOption>({
   /**
    * 生命周期函数--监听页面加载
    */
-  onLoad() { },
+  onLoad() {},
 
   /**
    * 生命周期函数--监听页面初次渲染完成
@@ -97,6 +100,11 @@ Page<IConnectPageData, IConnectPageOption>({
       })
       .then((device) => {
         this.print("连接成功", device);
+        if ("wifiList" in device) {
+          this.setData({
+            wifiList: device.wifiList,
+          });
+        }
       })
       .catch((error) => {
         this.print("连接失败", error);
@@ -106,18 +114,17 @@ Page<IConnectPageData, IConnectPageOption>({
   /**
    * 生命周期函数--监听页面显示
    */
-  onShow() { },
+  onShow() {},
 
   /**
    * 生命周期函数--监听页面隐藏
    */
-  onHide() { },
+  onHide() {},
 
   /**
    * 生命周期函数--监听页面卸载
    */
   onUnload() {
-    this.bleService?.release()
+    this.bleService?.release();
   },
-
 });
