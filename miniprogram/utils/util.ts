@@ -3,24 +3,24 @@
  */
 
 export const formatTime = (date: Date) => {
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hour = date.getHours()
-  const minute = date.getMinutes()
-  const second = date.getSeconds()
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hour = date.getHours();
+  const minute = date.getMinutes();
+  const second = date.getSeconds();
 
   return (
-    [year, month, day].map(formatNumber).join('/') +
-    ' ' +
-    [hour, minute, second].map(formatNumber).join(':')
-  )
-}
+    [year, month, day].map(formatNumber).join("/") +
+    " " +
+    [hour, minute, second].map(formatNumber).join(":")
+  );
+};
 
 const formatNumber = (n: number) => {
-  const s = n.toString()
-  return s[1] ? s : '0' + s
-}
+  const s = n.toString();
+  return s[1] ? s : "0" + s;
+};
 
 /**
  * 解析广播数据中的mac地址
@@ -67,7 +67,7 @@ export function hexString2ArrayArraybuffer(hexString: string | number[]) {
   return arrayBuffer.buffer;
 }
 
-export function int8Array2hexString(uint8Array: Int8Array) {
+export function uint8Array2hexString(uint8Array: Uint8Array) {
   let result = "";
   uint8Array.forEach(
     (d) => (result += d.toString(16).toUpperCase().padStart(2, "0"))
@@ -162,4 +162,15 @@ export function strToBytes(str: string) {
   return unescape(encodeURIComponent(str))
     .split("")
     .map((val) => val.charCodeAt(0));
+}
+
+/**
+ * 生成随机的token（长度为16的0~255的数字ß）
+ */
+export function generateToken(): Int8Array {
+  const token = new Int8Array(16);
+  for (let i = 0; i < 16; i++) {
+    token[i] = Math.floor(Math.random() * 255);
+  }
+  return token;
 }

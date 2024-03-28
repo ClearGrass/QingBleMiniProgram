@@ -5,7 +5,8 @@
 import { EConnectStep, EConnectStepStatus, EErrorCode } from "@services/define";
 import helper from "@utils/helper";
 import {
-  int8Array2hexString,
+  formatBytes,
+  generateToken,
   parseMAC,
   uint8Array2hexString,
 } from "@utils/util";
@@ -141,6 +142,38 @@ export class QingBleService {
       // 服务监听
       await this.startServiceListen();
 
+      const token = this.targetDeviceOption?.token || generateToken();
+      // 设置 token
+      const setTokenResult = await this.setToken(token);
+      if (!setTokenResult) {
+        this.onConnectStatusChange?.(
+          EConnectStep.SetToken,
+          EConnectStepStatus.Failed,
+          this.currentDevice
+        );
+        throw {
+          errCode: EErrorCode.NotFound,
+          errMessage: "设置 token 失败",
+        };
+      }
+
+      // 验证token
+      const verifyTokenResult = await this.setToken(token, "verify");
+      if (!verifyTokenResult) {
+        this.onConnectStatusChange?.(
+          EConnectStep.VerifyToken,
+          EConnectStepStatus.Failed,
+          this.currentDevice
+        );
+        throw {
+          errCode: EErrorCode.NotFound,
+          errMessage: "验证 token 失败",
+        };
+      }
+
+      // 获取 Wi-Fi 列表
+      const wifiList = await this.getWifiList();
+
       return this.currentDevice;
     } catch (error) {
       this.onConnectStatusChange?.(
@@ -163,11 +196,62 @@ export class QingBleService {
     }
   }
 
-  
+  /**
+   * 获取 Wi-Fi 列表
+   */
+  public async getWifiList(): Promise<Uint8Array> {
+    try {
+      const result = await this.write(
+        QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
+        QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
+        0x03,
+        "hex"
+      );
+      if ("errCode" in result) {
+        this.print("获取 Wi-Fi 列表失败", result);
+        throw result;
+      }
+      this.print("获取 Wi-Fi 列表成功", formatBytes(result.data, "str"));
+      return result.data;
+    } catch (error) {
+      this.print("获取 Wi-Fi 列表失败", error);
+      return new Uint8Array();
+    }
+  }
+
+  /**
+   * 设置/验证 token
+   */
+  private async setToken(
+    token: Int8Array,
+    type: "set" | "verify" = "set"
+  ): Promise<boolean> {
+    // 设置token
+    try {
+      const result = await this.write(
+        QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
+        QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
+        type === "set" ? 0x01 : 0x02,
+        "hex",
+        token
+      );
+
+      if ("errCode" in result) {
+        throw result;
+      }
+      if ("success" in result) {
+        return result.success;
+      }
+      return false;
+    } catch (error) {
+      this.print("设置 token 失败", error);
+      throw error;
+    }
+  }
 
   /**
    * 写入数据，这里不传 serviceUUID是因为写入的服务是固定不变的
-   * @param characteristicUUID  写入数据的特征值 UUID
+   * @param writeCharacteristicUUID  写入数据的特征值 UUID
    * @param type 写入数据的类型
    * @param data 写入的数据
    * @param format 数据格式
@@ -176,21 +260,21 @@ export class QingBleService {
    * @returns
    */
   private async write(
-    characteristicUUID: string,
+    writeCharacteristicUUID: string,
+    notifyCharacteristicUUID: string,
     type: number,
     format: FormatType,
     data?: ArrayBuffer,
     isSplitReceive: boolean = false,
     noResponse: boolean = false
-  ): Promise<IError | { success: boolean; data: Int8Array }> {
-    if (this.isConnected) {
+  ): Promise<IError | { success: boolean; data: Uint8Array }> {
+    if (!this.isConnected) {
       return Promise.resolve({
         errCode: EErrorCode.Disconnected,
         errMessage: "蓝牙已断开",
       } as IError);
     }
-    this.print(`写入数据[${characteristicUUID}]`, type, data);
-    const commandKey = `${characteristicUUID}_${type}`;
+    const commandKey = `${notifyCharacteristicUUID}_${type}`;
     if (this.commandMap.has(commandKey)) {
       return Promise.resolve({
         errCode: EErrorCode.InProgress,
@@ -211,24 +295,27 @@ export class QingBleService {
         if (!noResponse) {
           this.commandMap.set(commandKey, {
             type,
-            characteristicId: characteristicUUID,
             format,
             timeoutId,
             isSplitReceive,
             resolve,
-            receivedData: new Int8Array([]),
+            receivedData: new Uint8Array([]),
           });
         }
 
-        let writeData = data ? new Int8Array(data) : new Int8Array([type]);
+        let writeData = data ? new Uint8Array(data) : new Uint8Array([]);
         // writeData 前面增加一个字节，用于标识数据长度
-        writeData = new Int8Array([writeData.length, ...writeData]);
+        writeData = new Uint8Array([writeData.length + 1, type, ...writeData]);
+        this.print(
+          `写入数据[${writeCharacteristicUUID}]`,
+          uint8Array2hexString(writeData)
+        );
 
         // 写入数据
         await wx.writeBLECharacteristicValue({
           deviceId: this.currentDevice!.deviceId,
           serviceId: QingUUID.DEVICE_BASE_SERVICE_UUID,
-          characteristicId: characteristicUUID,
+          characteristicId: writeCharacteristicUUID,
           value: writeData.buffer,
         });
         // 不需要回复的话就立即返回，比如分包发送的话 只要发送成功就可以了
@@ -236,7 +323,7 @@ export class QingBleService {
           clearTimeout(timeoutId);
           // 这里延迟100毫秒后再返回
           setTimeout(() => {
-            resolve(true);
+            resolve({ success: true, data: new Uint8Array() });
           }, 100);
         }
       } catch (error: any) {
@@ -419,11 +506,11 @@ export class QingBleService {
   /**
    * 蓝牙特征值变化
    */
-  private onBLECharacteristicValueChange({
+  private onBLECharacteristicValueChange = ({
     characteristicId,
     deviceId,
     value,
-  }: CharValueChangeType) {
+  }: CharValueChangeType) => {
     if (deviceId !== this.currentDevice?.deviceId) {
       this.print("onBLECharacteristicValueChange: deviceId 不匹配", deviceId);
       return;
@@ -431,10 +518,10 @@ export class QingBleService {
     this.print(
       "onBLECharacteristicValueChange:",
       characteristicId,
-      int8Array2hexString(new Int8Array(value))
+      uint8Array2hexString(new Uint8Array(value))
     );
     // value 转换成 Int8Array
-    const valueInt8Array = new Int8Array(value);
+    const valueInt8Array = new Uint8Array(value);
     // valueInt8Array 的数据格式是 1 byte的数据长度 + 1 byte的命令字 + 数据
     const dataLength = valueInt8Array[0];
     let type = valueInt8Array[1];
@@ -455,9 +542,9 @@ export class QingBleService {
     const command = this.commandMap.get(commandKey)!;
     if (type === 0xff) {
       if (data[0] === 0x01) {
-        command.resolve(true);
+        command.resolve({ success: true, data });
       } else {
-        command.resolve(false);
+        command.resolve({ success: false, data });
       }
       clearTimeout(command.timeoutId);
       this.commandMap.delete(commandKey);
@@ -468,7 +555,7 @@ export class QingBleService {
       const total = data[0];
       const current = data[1];
       const currentData = data.slice(2);
-      command.receivedData = new Int8Array([
+      command.receivedData = new Uint8Array([
         ...command.receivedData,
         ...currentData,
       ]);
@@ -476,21 +563,21 @@ export class QingBleService {
         this.commandMap.set(commandKey, command);
         return;
       }
-      command.resolve(data);
+      command.resolve({ success: true, data: command.receivedData });
       clearTimeout(command.timeoutId);
       this.commandMap.delete(commandKey);
     } else {
       // 非分包接收
-      command.resolve(data);
+      command.resolve({ success: true, data });
       clearTimeout(command.timeoutId);
       this.commandMap.delete(commandKey);
     }
-  }
+  };
 
-  private onBLEConnectionStateChange({
+  private onBLEConnectionStateChange = ({
     deviceId,
     connected,
-  }: ConnectStateChangeType) {
+  }: ConnectStateChangeType) => {
     this.print("onBLEConnectionStateChange:", deviceId, connected);
     if (deviceId !== this.currentDevice?.deviceId) {
       return;
@@ -504,7 +591,7 @@ export class QingBleService {
       );
       this.removeSubscriptions();
     }
-  }
+  };
 
   /**
    * 订阅状态变化

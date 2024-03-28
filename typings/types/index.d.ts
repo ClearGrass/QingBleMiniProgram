@@ -15,7 +15,7 @@ interface IConnectOption {
   productId: EQingProductID;
   // 可不传，如果传 mac 的话，token 必传，
   //第一次连接后建议把 token 保存起来，下一次连接的时候（比如需要切换 Wi-Fi 时）将此 token 传递进来
-  token?: string;
+  token?: Int8Array;
   // 超时时间，不传的话会默认给一个超时时间
   timeout?: number;
 }
@@ -64,18 +64,16 @@ interface IQingBlueToothDevice {
   broadcastData: string;
 }
 
-interface ICommand<T = IError | { success: boolean; data: Int8Array }> {
+interface ICommand<T = IError | { success: boolean; data: Uint8Array }> {
   // 命令字
   type: number;
-  // uuid
-  characteristicId: string;
   // 是否分包接收
   isSplitReceive?: boolean;
   // 格式化数据
   format: FormatType;
   // 超时定时器 id
   timeoutId: number;
-  receivedData: Int8Array;
+  receivedData: Uint8Array;
 
   resolve: (value: T) => void;
 }
