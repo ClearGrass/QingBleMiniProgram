@@ -1,0 +1,4 @@
+<view class="container">
+  <image src="/assets/gateway.png" class="gataway" mode="" />
+  <text class="connect-status">{{connectStatus}}</text>
+</view>

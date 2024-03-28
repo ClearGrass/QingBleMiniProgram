@@ -1,0 +1,22 @@
+/*
+ * Created by Tiger on 28/03/2024
+ */
+
+export class QingUUID {
+  public static readonly DEVICE_BASE_SERVICE_UUID =
+    "22210000-554A-4546-5542-46534450464D";
+
+  public static readonly BASE_WRITE_CHARACTERISTIC_UUID =
+    "00000001-0000-1000-8000-00805F9B34FB";
+
+  public static readonly BASE_NOTIFY_CHARACTERISTIC_UUID =
+    "00000002-0000-1000-8000-00805F9B34FB";
+
+  // sparrow gateway 相关
+  public static readonly SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID =
+    "00000015-0000-1000-8000-00805F9B34FB";
+  public static readonly SPARROW_GATEWAY_NOTIFY_CHARACTERISTIC_UUID =
+    "00000016-0000-1000-8000-00805F9B34FB";
+  
+  
+}

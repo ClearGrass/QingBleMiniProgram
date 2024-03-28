@@ -1,3 +1,7 @@
+/*
+ * Created by Tiger on 28/03/2024
+ */
+
 import { formatTime } from "./util"
 
 
@@ -7,7 +11,7 @@ import { formatTime } from "./util"
  * @param restArgs 打印信息
  */
 const printLog = (tag: string, ...restArgs: any) => {
-  const time = formatTime()
+  const time = formatTime(new Date());
   console.log(`[${time}-${tag}]`, ...restArgs);
 }
 

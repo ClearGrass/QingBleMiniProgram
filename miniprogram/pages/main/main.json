@@ -1,0 +1,7 @@
+{
+  "styleIsolation": "shared",
+  "navigationBarTitleText": "QingBLE",
+  "navigationStyle": "default",
+  "navigationBarBackgroundColor": "#ffffff",
+  "usingComponents": {}
+}

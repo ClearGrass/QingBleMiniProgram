@@ -3,5 +3,18 @@
   "projectname": "QingBleMiniProgram",
   "setting": {
     "compileHotReLoad": true
+  },
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "pages/connect/connect",
+          "pathName": "pages/connect/connect",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        }
+      ]
+    }
   }
 }
