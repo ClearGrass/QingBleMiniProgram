@@ -1,11 +1,9 @@
 import { EErrorCode, EQingProductID } from "@services/define";
 
-
 type ConnectStateChangeType =
   WechatMiniprogram.OnBLEConnectionStateChangeListenerResult;
 type CharValueChangeType =
   WechatMiniprogram.OnBLECharacteristicValueChangeListenerResult;
-  
 
 /**
  * 连接参数
@@ -66,12 +64,16 @@ interface IQingBlueToothDevice {
   broadcastData: string;
 }
 
-
 interface ICommand {
   // 命令字
   type: number;
   // uuid
-  
+  characteristicId: string;
+  // 是否分包接收
+  isSplitReceive?: boolean;
+  // 格式化数据
+  format: "hex" | "string";
+
   // 数据
-  data: number[];
+  data: Int8Array;
 }
