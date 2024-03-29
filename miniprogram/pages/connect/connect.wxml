@@ -1,7 +1,7 @@
 <view class="container" style="padding: 0">
   <image src="/assets/gateway.png" class="gataway" mode="" />
   <text class="connect-status">{{connectStatus}}</text>
-  <button wx:if="{{refreshWiFiListShow}}" class="get-wifi" bind:tap="">重新获取 Wi-Fi 列表</button>
+  <button wx:if="{{refreshWiFiListShow}}" class="get-wifi" bind:tap="getWiFiList">重新获取 Wi-Fi 列表</button>
 </view>
 <view class="wifi-list-page" wx:if="{{wifiList}}">
   <view class="wifi-item-list">
