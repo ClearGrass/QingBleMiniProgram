@@ -67,7 +67,8 @@ Page<IConnectPageData, IConnectPageOption>({
     };
     switch (status) {
       case EConnectStepStatus.InProgress:
-        connectStatus = `正在${getStepDesc()}...`;
+        connectStatus = `正在${getStepDesc()}...` +
+          (step === EConnectStep.Scan ? '\n请长按网关顶部 5 秒，直至橙色指示灯快速闪烁。' : '');
         break;
       case EConnectStepStatus.Success:
         connectStatus = `${getStepDesc()} 成功`;
