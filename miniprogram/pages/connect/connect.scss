@@ -1,7 +1,6 @@
 
 
 .gataway {
-  margin-top: 150rpx;
   height: 200rpx;
   width: 200rpx;
 }
@@ -10,4 +9,70 @@
   margin: 40rpx;
   text-align: center;
   line-height: 50rpx;
+}
+
+
+
+.wifi-list-page {
+  display: flex;
+  flex: 1;
+  background-color: #f5f4f3;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+}
+
+
+.wifi-indicator {
+  margin-top: 40px;
+  width: 40px;
+  height: 50px;
+}
+
+.wifi-item-list {
+  /*margin-top: 45px;*/
+  background-color: #FFF;
+  width: 100%;
+  margin-bottom: 44px;
+}
+
+.wifi-item {
+  display: flex;
+  flex-direction: row;
+  height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  margin-left: 15px;
+  margin-right: 15px;
+  border-bottom: 0.5px solid #42424233;
+}
+
+.wifi-item-hover {
+  opacity: 0.4;
+}
+
+.wifi-item-title {
+  color: #424242;
+  font-size: 14px;
+}
+
+.wifi-item-icons {
+  flex-direction: row;
+}
+
+.wifi-item-icon {
+width: 15px;
+height: 10px;
+margin-left: 10px;
+opacity: 0.5;
+}
+
+.wifi-item-icon-arrow {
+width: 15px;
+height: 10px;
+margin-left: 10px;
+}
+
+.wifi-input-entry {
+  border-bottom: none;
 }

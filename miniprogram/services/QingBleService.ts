@@ -9,6 +9,7 @@ import {
   generateToken,
   parseMAC,
   parseWifiList,
+  strToBytes,
   uint8Array2hexString,
 } from "@utils/util";
 import { QingUUID } from "./QingUUID";
@@ -72,7 +73,6 @@ export class QingBleService {
     const parsedDevices = devices
       .filter(this.filterBroadcast)
       .map(this.parseBroadcastData);
-    this.print("解析后的设备", parsedDevices);
     // 扫描到设备后，判断是否有目标设备
     const targetDevice = parsedDevices.find((device) => {
       if (this.targetDeviceOption?.mac) {
@@ -82,6 +82,7 @@ export class QingBleService {
     });
 
     if (targetDevice) {
+      this.print("找到目标设备:", targetDevice);
       this.stopScan();
       this.scanResolve?.(targetDevice);
       this.scanTimer && clearTimeout(this.scanTimer);
@@ -217,7 +218,7 @@ export class QingBleService {
       }
       if (!result.success) {
         this.print("获取 Wi-Fi 列表失败", result);
-        return new Uint8Array();
+        return [];
       }
 
       this.print(
@@ -228,7 +229,51 @@ export class QingBleService {
       return parseWifiList(result.data);
     } catch (error) {
       this.print("获取 Wi-Fi 列表失败", error);
-      return new Uint8Array();
+      return [];
+    }
+  }
+
+  /**
+   * 连接Wi-Fi
+   * @param name  WiFi ssid
+   * @param password  WiFi密码
+   */
+  public async setWifi(name: string, password: string = ""): Promise<boolean> {
+    this.onConnectStatusChange?.(
+      EConnectStep.SetWifi,
+      EConnectStepStatus.InProgress,
+      this.currentDevice
+    );
+    const wifiInfo = `"${name}","${password}"`;
+    const sendData = strToBytes(wifiInfo);
+    try {
+      const result = await this.write(
+        QingUUID.SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID,
+        QingUUID.SPARROW_GATEWAY_NOTIFY_CHARACTERISTIC_UUID,
+        0x01,
+        "hex",
+        new Uint8Array(sendData),
+        false
+      );
+      if ("errCode" in result || !result.success) {
+        this.print("连接 Wi-Fi 失败", result);
+        this.onConnectStatusChange?.(
+          EConnectStep.SetWifi,
+          EConnectStepStatus.Failed,
+          this.currentDevice
+        );
+        return false;
+      }
+      this.print("连接 Wi-Fi 成功", result);
+      this.onConnectStatusChange?.(
+        EConnectStep.SetWifi,
+        EConnectStepStatus.Success,
+        this.currentDevice
+      );
+      return true;
+    } catch (error) {
+      this.print("连接 Wi-Fi 失败", error);
+      return false;
     }
   }
 
@@ -324,13 +369,23 @@ export class QingBleService {
           uint8Array2hexString(writeData)
         );
 
-        // 写入数据
-        await wx.writeBLECharacteristicValue({
-          deviceId: this.currentDevice!.deviceId,
-          serviceId: QingUUID.DEVICE_BASE_SERVICE_UUID,
-          characteristicId: writeCharacteristicUUID,
-          value: writeData.buffer,
-        });
+        // 如果writeData长度超过20，则分包发送
+        if (writeData.length > 20) {
+          const total = Math.ceil(writeData.length / 20);
+          for (let i = 0; i < total; i++) {
+            const start = i * 20;
+            const end = (i + 1) * 20;
+            const currentData = writeData.slice(start, end);
+            await wx.writeBLECharacteristicValue({
+              deviceId: this.currentDevice!.deviceId,
+              serviceId: QingUUID.DEVICE_BASE_SERVICE_UUID,
+              characteristicId: writeCharacteristicUUID,
+              value: currentData,
+            });
+          }
+          return;
+        }
+
         // 不需要回复的话就立即返回，比如分包发送的话 只要发送成功就可以了
         if (noResponse) {
           clearTimeout(timeoutId);

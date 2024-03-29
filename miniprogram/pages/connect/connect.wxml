@@ -1,4 +1,29 @@
-<view class="container">
+<view class="container" style="padding: 0">
   <image src="/assets/gateway.png" class="gataway" mode="" />
   <text class="connect-status">{{connectStatus}}</text>
+
+</view>
+<view class="wifi-list-page">
+  <view class="wifi-item-list">
+    <view class="wifi-item" hover-class="wifi-item-hover" wx:for="{{wifiList}}" wx:key="index" catchtap="selectSSID" data-item="{{item}}">
+      <text class="wifi-item-title">{{item.name}}</text>
+      <view class="wifi-item-icons">
+        <image class="wifi-item-icon" wx:if="{{item.auth}}" mode="heightFix" src="/assets/wifi/wifi_lock@3x.png" />
+
+        <image class="wifi-item-icon" wx:if="{{item.rssi >= -50}}" mode="widthFix" src="/assets/wifi/wifi_rssi3@3x.png" />
+        <image class="wifi-item-icon" wx:elif="{{item.rssi >= -80}}" mode="widthFix" src="/assets/wifi/wifi_rssi2@3x.png" />
+        <image class="wifi-item-icon" wx:elif="{{item.rssi >= -90}}" mode="widthFix" src="/assets/wifi/wifi_rssi1@3x.png" />
+        <image class="wifi-item-icon" wx:else="{{item.rssi >= -1000000}}" mode="widthFix" src="/assets/wifi/wifi_rssi0@3x.png" />
+      </view>
+    </view>
+
+    <!-- <view class="wifi-item wifi-input-entry" bindtap="selectCustomSSID" hover-class="wifi-item-hover">
+      <text class="wifi-item-title">加入其它网络</text>
+      <view class="wifi-item-icons">
+        <image class="wifi-item-icon-arrow" mode="heightFix" src="/assets/icons/right_arrow@3x.png" />
+      </view>
+    </view> -->
+
+  </view>
+
 </view>

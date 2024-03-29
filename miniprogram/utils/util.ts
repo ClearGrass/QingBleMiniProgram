@@ -205,3 +205,28 @@ export function parseWifiList(data: Uint8Array): IWiFiItem[] {
     );
   });
 }
+
+/**
+ * WiFi list
+ */
+
+export function fakeWifiList(): IWiFiItem[] {
+  return [
+    { "name": "Qingping", "auth": 4, "rssi": -39 },
+    { "name": "philips-light-sread1_miap95f2", "auth": 0, "rssi": -60 },
+    { "name": "Harmony Health-SZ", "auth": 4, "rssi": -63 },
+    { "name": "ChinaNet-KfGq", "auth": 4, "rssi": -65 },
+    { "name": "Xiaomi_C6B7", "auth": 4, "rssi": -67 },
+    { "name": "Pheasant_Test", "auth": 3, "rssi": -67 },
+    { "name": "RRG_F", "auth": 4, "rssi": -71 },
+    { "name": "SZLY-WORK", "auth": 4, "rssi": -75 },
+    { "name": "Hamony Health-SZ", "auth": 4, "rssi": -82 },
+    { "name": "RRG", "auth": 4, "rssi": -85 },
+    { "name": "HiWiFi", "auth": 0, "rssi": -85 },
+    { "name": "ChinaNet-CGvd", "auth": 4, "rssi": -87 },
+    { "name": "TP-LINK_RRG", "auth": 4, "rssi": -88 },
+    { "name": "yyd-2A-meeting", "auth": 4, "rssi": -89 },
+    { "name": "RRG_WORK2", "auth": 4, "rssi": -89 },
+    { "name": "dianjiangCN", "auth": 4, "rssi": -95 },
+  ]
+}

@@ -6,6 +6,7 @@ import {
 import helper from "@utils/helper";
 import { QingBleService } from "@services/QingBleService";
 import { IQingBlueToothDevice, IWiFiItem } from "typings/types";
+import { fakeWifiList } from "@utils/util";
 
 interface IConnectPageData {
   connectStatus?: string;
@@ -21,6 +22,7 @@ interface IConnectPageOption {
     status: EConnectStepStatus,
     device: IQingBlueToothDevice | null
   ) => void;
+  selectSSID: (event: WechatMiniprogram.CustomEvent) => void;
 }
 
 Page<IConnectPageData, IConnectPageOption>({
@@ -82,7 +84,9 @@ Page<IConnectPageData, IConnectPageOption>({
   /**
    * 页面的初始数据
    */
-  data: {},
+  data: {
+    wifiList: fakeWifiList(),
+  },
 
   /**
    * 生命周期函数--监听页面加载
@@ -109,6 +113,44 @@ Page<IConnectPageData, IConnectPageOption>({
       .catch((error) => {
         this.print("连接失败", error);
       });
+  },
+
+  async selectSSID(event) {
+    const item: IWiFiItem = event.currentTarget.dataset.item;
+    const name = item.name;
+    let password = "";
+    if (item.auth) {
+      // 弹出输入框让用户输入密码
+      const res = await wx.showModal({
+        title: `请输入[${name}]的密码`,
+        content: "",
+        editable: true,
+      });
+      if (res.cancel) {
+        return;
+      }
+      password = res.content;
+    }
+
+    // loading
+    wx.showLoading({
+      title: `正在连接[${name}]`,
+    });
+    // 连接 Wi-Fi
+    try {
+      const setWifiResult = await this.bleService?.setWifi(name, password);
+      wx.showLoading({
+        title: `[${name}]连接${setWifiResult ? "成功" : "失败"}`,
+      });
+    } catch (error) {
+      this.onConnectStatusChange(
+        EConnectStep.SetWifi,
+        EConnectStepStatus.Failed,
+        null
+      );
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   /**
