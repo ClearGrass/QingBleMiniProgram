@@ -1,8 +1,11 @@
-
-
 .gataway {
   height: 200rpx;
   width: 200rpx;
+}
+
+.get-wifi {
+  width: 100%;
+  font-size: 30rpx;
 }
 
 .connect-status {
@@ -61,16 +64,16 @@
 }
 
 .wifi-item-icon {
-width: 15px;
-height: 10px;
-margin-left: 10px;
-opacity: 0.5;
+  width: 15px;
+  height: 10px;
+  margin-left: 10px;
+  opacity: 0.5;
 }
 
 .wifi-item-icon-arrow {
-width: 15px;
-height: 10px;
-margin-left: 10px;
+  width: 15px;
+  height: 10px;
+  margin-left: 10px;
 }
 
 .wifi-input-entry {

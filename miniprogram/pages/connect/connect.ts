@@ -12,6 +12,7 @@ interface IConnectPageData {
   connectStatus?: string;
   wifiList?: IWiFiItem[];
   mqttConfig?: IMqttConfig;
+  refreshWiFiListShow: boolean
 }
 interface IConnectPageOption {
   LogType: string;
@@ -25,6 +26,7 @@ interface IConnectPageOption {
   ) => void;
   selectSSID: (event: WechatMiniprogram.CustomEvent) => void;
   setMqtt: (mqtt: IMqttConfig) => void;
+  getWiFiList: () => void
 }
 
 Page<IConnectPageData, IConnectPageOption>({
@@ -48,8 +50,6 @@ Page<IConnectPageData, IConnectPageOption>({
           return "设置 Token";
         case EConnectStep.VerifyToken:
           return "验证 Token";
-        case EConnectStep.SetTime:
-          return "设置时间";
         case EConnectStep.SetWifi:
           return "设置 Wi-Fi";
         case EConnectStep.SetMqtt:
@@ -89,6 +89,7 @@ Page<IConnectPageData, IConnectPageOption>({
    * 页面的初始数据
    */
   data: {
+    refreshWiFiListShow: false,
     // wifiList: fakeWifiList(),
     // 这里请写自己真实的MQTT配置，我这里是测试配置
     mqttConfig: {
@@ -126,6 +127,7 @@ Page<IConnectPageData, IConnectPageOption>({
       .then((result) => {
         if (result) {
           this.setData({
+            refreshWiFiListShow: true,
             wifiList: result,
           });
         }
@@ -156,13 +158,13 @@ Page<IConnectPageData, IConnectPageOption>({
       title: `正在连接[${name}]`,
       mask: true,
     });
+
     try {
       // 连接 Wi-Fi
       const setWifiResult = await this.bleService?.setWifi(name, password);
       const result = await wx.showModal({
-        title: `[${name}]连接${
-          setWifiResult ? "成功" : "失败"
-        }, 请输入MQTT配置`,
+        title: `[${name}]连接${setWifiResult ? "成功" : "失败"
+          }, 请输入MQTT配置`,
         content: JSON.stringify(this.data.mqttConfig),
         editable: true,
       });
@@ -193,6 +195,7 @@ Page<IConnectPageData, IConnectPageOption>({
         title: `Mqtt 配置设置${suc ? "成功" : "失败"}`,
       });
     };
+
     try {
       wx.showLoading({ title: "正在设置 MQTT" });
       const result = await this.bleService?.setMqtt(mqtt);
@@ -202,6 +205,16 @@ Page<IConnectPageData, IConnectPageOption>({
     } finally {
       wx.hideLoading();
     }
+  },
+  getWiFiList() {
+    this.setData({
+      refreshWiFiListShow: false,
+      wifiList: [],
+    })
+    this.bleService?.getWifiList().then((wifiList) => this.setData({
+      wifiList,
+      refreshWiFiListShow: true
+    }))
   },
 
   /**
