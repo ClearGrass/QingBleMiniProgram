@@ -3,7 +3,7 @@
   <text class="connect-status">{{connectStatus}}</text>
 
 </view>
-<view class="wifi-list-page">
+<view class="wifi-list-page" wx:if="{{wifiList}}">
   <view class="wifi-item-list">
     <view class="wifi-item" hover-class="wifi-item-hover" wx:for="{{wifiList}}" wx:key="index" catchtap="selectSSID" data-item="{{item}}">
       <text class="wifi-item-title">{{item.name}}</text>

@@ -21,6 +21,7 @@ import {
   ICommand,
   IConnectOption,
   IError,
+  IMqttConfig,
   IQingBlueToothDevice,
   IWechatBlueToothDevice,
   IWiFiItem,
@@ -80,7 +81,10 @@ export class QingBleService {
       if (this.targetDeviceOption?.mac) {
         return device.mac === this.targetDeviceOption.mac;
       }
-      return device.productID === this.targetDeviceOption?.productId;
+      return (
+        device.productID === this.targetDeviceOption?.productId &&
+        !device.isBind
+      );
     });
 
     if (targetDevice) {
@@ -176,9 +180,6 @@ export class QingBleService {
         };
       }
 
-      // 获取 Wi-Fi 列表
-      const wifiList = await this.getWifiList();
-      this.currentDevice.wifiList = wifiList;
       return this.currentDevice;
     } catch (error) {
       this.onConnectStatusChange?.(
@@ -206,6 +207,11 @@ export class QingBleService {
    */
   public async getWifiList(): Promise<IWiFiItem[]> {
     try {
+      this.onConnectStatusChange?.(
+        EConnectStep.GetWifiList,
+        EConnectStepStatus.InProgress,
+        this.currentDevice
+      );
       const result = await this.write({
         writeCharacteristicUUID:
           QingUUID.SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID,
@@ -215,11 +221,7 @@ export class QingBleService {
         isSplitReceive: true,
         timeout: 40000,
       });
-      if ("errCode" in result) {
-        this.print("获取 Wi-Fi 列表失败", result);
-        throw result;
-      }
-      if (!result.success) {
+      if ("errCode" in result || !result.success) {
         this.print("获取 Wi-Fi 列表失败", result);
         return [];
       }
@@ -282,6 +284,55 @@ export class QingBleService {
   }
 
   /**
+   * 设置 MQTT
+   * @param mqtt  MQTT配置
+   * @returns
+   */
+  public async setMqtt(mqtt: IMqttConfig): Promise<boolean> {
+    const part1 = strToBytes(
+      `${mqtt.host} ${mqtt.port} ${mqtt.username} ${mqtt.password}`
+    );
+    const part2 = strToBytes(
+      `${mqtt.clientId} ${mqtt.subTopic} ${mqtt.pubTopic}`
+    );
+    this.onConnectStatusChange?.(
+      EConnectStep.SetMqtt,
+      EConnectStepStatus.InProgress,
+      this.currentDevice
+    );
+
+    try {
+      const part1Result = await this.write({
+        writeCharacteristicUUID: QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
+        notifyCharacteristicUUID: QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
+        type: QingCommandType.SetMqttPart1,
+        data: new Uint8Array(part1),
+        timeout: 30000,
+      });
+      if ("errCode" in part1Result || !part1Result.success) {
+        this.print("设置 MQTT Part1 设置失败", part1Result);
+        return false;
+      }
+      const part2Result = await this.write({
+        writeCharacteristicUUID: QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
+        notifyCharacteristicUUID: QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
+        type: QingCommandType.SetMqttPart2,
+        data: new Uint8Array(part2),
+        timeout: 30000,
+      });
+      if ("errCode" in part2Result || !part2Result.success) {
+        this.print("设置 MQTT Part2 设置失败", part2Result);
+        return false;
+      }
+    } catch (error) {
+      this.print("设置 MQTT 失败", error);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * 设置/验证 token
    */
   private async setToken(
@@ -290,6 +341,11 @@ export class QingBleService {
   ): Promise<boolean> {
     // 设置token
     try {
+      this.onConnectStatusChange?.(
+        type === "set" ? EConnectStep.SetToken : EConnectStep.VerifyToken,
+        EConnectStepStatus.InProgress,
+        this.currentDevice
+      );
       const result = await this.write({
         writeCharacteristicUUID: QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
         notifyCharacteristicUUID: QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
@@ -301,13 +357,29 @@ export class QingBleService {
       });
 
       if ("errCode" in result) {
+        this.print("设置 token 失败", result);
+        this.onConnectStatusChange?.(
+          type === "set" ? EConnectStep.SetToken : EConnectStep.VerifyToken,
+          EConnectStepStatus.Failed,
+          this.currentDevice
+        );
         throw result;
       }
       if ("success" in result) {
+        this.onConnectStatusChange?.(
+          type === "set" ? EConnectStep.SetToken : EConnectStep.VerifyToken,
+          EConnectStepStatus.Success,
+          this.currentDevice
+        );
         return result.success;
       }
       return false;
     } catch (error) {
+      this.onConnectStatusChange?.(
+        type === "set" ? EConnectStep.SetToken : EConnectStep.VerifyToken,
+        EConnectStepStatus.Failed,
+        this.currentDevice
+      );
       this.print("设置 token 失败", error);
       throw error;
     }
@@ -654,8 +726,8 @@ export class QingBleService {
     this.isConnected = connected;
     if (!connected) {
       this.onConnectStatusChange?.(
-        EConnectStep.Connect,
-        EConnectStepStatus.Failed,
+        EConnectStep.Disconnected,
+        EConnectStepStatus.Success,
         this.currentDevice
       );
       this.removeSubscriptions();

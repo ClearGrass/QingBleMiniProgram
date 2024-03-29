@@ -62,8 +62,6 @@ interface IQingBlueToothDevice {
   rawData?: IWechatBlueToothDevice;
   // 广播数据
   broadcastData: string;
-  // wifiList
-  wifiList?: IWiFiItem[];
 }
 
 /**
@@ -109,4 +107,16 @@ interface IWiFiItem {
   name: string;
   auth: number;
   rssi: number;
+}
+
+// mqtt 配置
+interface IMqttConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+
+  clientId: string;
+  subTopic: string;
+  pubTopic: string;
 }

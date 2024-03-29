@@ -5,12 +5,13 @@ import {
 } from "@services/define";
 import helper from "@utils/helper";
 import { QingBleService } from "@services/QingBleService";
-import { IQingBlueToothDevice, IWiFiItem } from "typings/types";
+import { IMqttConfig, IQingBlueToothDevice, IWiFiItem } from "typings/types";
 import { fakeWifiList } from "@utils/util";
 
 interface IConnectPageData {
   connectStatus?: string;
   wifiList?: IWiFiItem[];
+  mqttConfig?: IMqttConfig;
 }
 interface IConnectPageOption {
   LogType: string;
@@ -23,6 +24,7 @@ interface IConnectPageOption {
     device: IQingBlueToothDevice | null
   ) => void;
   selectSSID: (event: WechatMiniprogram.CustomEvent) => void;
+  setMqtt: (mqtt: IMqttConfig) => void;
 }
 
 Page<IConnectPageData, IConnectPageOption>({
@@ -33,7 +35,6 @@ Page<IConnectPageData, IConnectPageOption>({
   },
 
   onConnectStatusChange(step, status, device) {
-    this.print("onConnectStatusChange", step, status);
     let connectStatus = "";
     const getStepDesc = () => {
       switch (step) {
@@ -56,6 +57,9 @@ Page<IConnectPageData, IConnectPageOption>({
         case EConnectStep.GetWifiList:
           return "获取 Wi-Fi 列表";
         case EConnectStep.Disconnected:
+          this.setData({
+            wifiList: [],
+          });
           return "断开连接";
         default:
           return "unknown";
@@ -86,13 +90,20 @@ Page<IConnectPageData, IConnectPageOption>({
    */
   data: {
     // wifiList: fakeWifiList(),
-    
-  },
+    // 这里请写自己真实的MQTT配置，我这里是测试配置
+    mqttConfig: {
+      host: "mqtt.bj.cleargrass.com",
+      port: 11883,
+      username: "50EC508796A2&lv-H1QbGg",
+      password:
+        "8711e9d5feadfe5e559c4698f58dc211dd24cc8a6467823f61f9422b46dcecb3",
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad() {},
+      clientId:
+        "50EC508796A2|securemode=3,signmethod=hmacsha256,prefix=,random=server461|",
+      subTopic: "/lv-H1QbGg/50EC508796A2/user/get",
+      pubTopic: "/lv-H1QbGg/50EC508796A2/user/update",
+    },
+  },
 
   /**
    * 生命周期函数--监听页面初次渲染完成
@@ -103,11 +114,19 @@ Page<IConnectPageData, IConnectPageOption>({
       .startConnect({
         productId: EQingProductID.GatewaySparrow,
       })
-      .then((device) => {
-        this.print("连接成功", device);
-        if ("wifiList" in device) {
+      .then((result) => {
+        if ("errCode" in result) {
+          this.print("连接失败", result);
+          return;
+        }
+        this.print("连接成功", result);
+        this.device = result;
+        return this.bleService?.getWifiList();
+      })
+      .then((result) => {
+        if (result) {
           this.setData({
-            wifiList: device.wifiList,
+            wifiList: result,
           });
         }
       })
@@ -133,16 +152,25 @@ Page<IConnectPageData, IConnectPageOption>({
       password = res.content;
     }
 
-    // loading
     wx.showLoading({
       title: `正在连接[${name}]`,
+      mask: true,
     });
-    // 连接 Wi-Fi
     try {
+      // 连接 Wi-Fi
       const setWifiResult = await this.bleService?.setWifi(name, password);
-      wx.showLoading({
-        title: `[${name}]连接${setWifiResult ? "成功" : "失败"}`,
+      const result = await wx.showModal({
+        title: `[${name}]连接${
+          setWifiResult ? "成功" : "失败"
+        }, 请输入MQTT配置`,
+        content: JSON.stringify(this.data.mqttConfig),
+        editable: true,
       });
+      if (result.confirm) {
+        const mqttConfig = JSON.parse(result.content) as IMqttConfig;
+        // 设置mqtt
+        this.setMqtt(mqttConfig);
+      }
     } catch (error) {
       this.onConnectStatusChange(
         EConnectStep.SetWifi,
@@ -154,15 +182,27 @@ Page<IConnectPageData, IConnectPageOption>({
     }
   },
 
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {},
-
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {},
+  async setMqtt(mqtt) {
+    const showMessage = (suc: boolean) => {
+      this.onConnectStatusChange(
+        EConnectStep.SetMqtt,
+        suc ? EConnectStepStatus.Success : EConnectStepStatus.Failed,
+        null
+      );
+      wx.showLoading({
+        title: `Mqtt 配置设置${suc ? "成功" : "失败"}`,
+      });
+    };
+    try {
+      wx.showLoading({ title: "正在设置 MQTT" });
+      const result = await this.bleService?.setMqtt(mqtt);
+      showMessage(!!result);
+    } catch (error) {
+      showMessage(false);
+    } finally {
+      wx.hideLoading();
+    }
+  },
 
   /**
    * 生命周期函数--监听页面卸载

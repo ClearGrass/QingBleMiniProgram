@@ -14,5 +14,8 @@ export class QingCommandType {
   public static readonly GetWifiList = 0x07;
   // 设置 Wi-Fi
   public static readonly SetWifi = 0x01;
-  // 设置 MQTT
+  // 设置 MQTT Part1
+  public static readonly SetMqttPart1 = 0x17;
+  // 设置 MQTT Part2
+  public static readonly SetMqttPart2 = 0x18;
 }
