@@ -66,13 +66,14 @@ interface IQingBlueToothDevice {
   wifiList?: IWiFiItem[];
 }
 
+/**
+ * 发送命令
+ */
 interface ICommand<T = IError | { success: boolean; data: Uint8Array }> {
   // 命令字
   type: number;
   // 是否分包接收
   isSplitReceive?: boolean;
-  // 格式化数据
-  format: FormatType;
   // 超时定时器 id
   timeoutId: number;
   receivedData: Uint8Array;
@@ -80,11 +81,30 @@ interface ICommand<T = IError | { success: boolean; data: Uint8Array }> {
   resolve: (value: T) => void;
 }
 
+/**
+ * 写入命令参数
+ */
+interface IWriteCommandOption {
+  // 写入数据的特征值 UUID
+  writeCharacteristicUUID: string;
+  // 回复数据的特征值 UUID (如果noResponse为true，则不需要传)
+  notifyCharacteristicUUID?: string;
+  // 命令字
+  type: number;
+  // 是否不需要回复
+  noResponse?: boolean;
+  // 数据
+  data?: ArrayBuffer;
+  // 是否分包接收
+  isSplitReceive?: boolean;
+  // 超时时间
+  timeout?: number;
+}
+
 // 格式化数据类型
 type FormatType = "hex" | "string";
 
-
-// Wi-Fi 
+// Wi-Fi
 interface IWiFiItem {
   name: string;
   auth: number;

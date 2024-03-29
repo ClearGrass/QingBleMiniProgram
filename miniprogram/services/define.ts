@@ -7,6 +7,24 @@ export enum EQingProductID {
   GatewaySparrow = 0x0d,
 }
 
+/**
+ * 命令定义
+ */
+
+export enum EQingCommandType {
+  //  错误
+  Error = 0xff,
+  // 设置 token
+  SetToken = 0x01,
+  // 验证 token
+  VerifyToken = 0x02,
+  // 获取 Wi-Fi 列表
+  GetWifiList = 0x07,
+  // 设置 Wi-Fi
+  SetWifi = 0x01,
+
+}
+
 
 /**
  * 错误类型定义（第一个E是enum的意思）

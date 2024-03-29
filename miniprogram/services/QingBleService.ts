@@ -24,7 +24,9 @@ import {
   IQingBlueToothDevice,
   IWechatBlueToothDevice,
   IWiFiItem,
+  IWriteCommandOption,
 } from "typings/types";
+import { QingCommandType } from "./QingCommandType";
 
 /**
  * 连接、管理蓝牙设备类
@@ -204,14 +206,15 @@ export class QingBleService {
    */
   public async getWifiList(): Promise<IWiFiItem[]> {
     try {
-      const result = await this.write(
-        QingUUID.SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID,
-        QingUUID.SPARROW_GATEWAY_NOTIFY_CHARACTERISTIC_UUID,
-        0x07,
-        "hex",
-        undefined,
-        true
-      );
+      const result = await this.write({
+        writeCharacteristicUUID:
+          QingUUID.SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID,
+        notifyCharacteristicUUID:
+          QingUUID.SPARROW_GATEWAY_NOTIFY_CHARACTERISTIC_UUID,
+        type: QingCommandType.GetWifiList,
+        isSplitReceive: true,
+        timeout: 40000,
+      });
       if ("errCode" in result) {
         this.print("获取 Wi-Fi 列表失败", result);
         throw result;
@@ -247,14 +250,15 @@ export class QingBleService {
     const wifiInfo = `"${name}","${password}"`;
     const sendData = strToBytes(wifiInfo);
     try {
-      const result = await this.write(
-        QingUUID.SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID,
-        QingUUID.SPARROW_GATEWAY_NOTIFY_CHARACTERISTIC_UUID,
-        0x01,
-        "hex",
-        new Uint8Array(sendData),
-        false
-      );
+      const result = await this.write({
+        writeCharacteristicUUID:
+          QingUUID.SPARROW_GATEWAY_WRITE_CHARACTERISTIC_UUID,
+        notifyCharacteristicUUID:
+          QingUUID.SPARROW_GATEWAY_NOTIFY_CHARACTERISTIC_UUID,
+        type: QingCommandType.SetWifi,
+        data: new Uint8Array(sendData),
+        timeout: 60000,
+      });
       if ("errCode" in result || !result.success) {
         this.print("连接 Wi-Fi 失败", result);
         this.onConnectStatusChange?.(
@@ -286,13 +290,15 @@ export class QingBleService {
   ): Promise<boolean> {
     // 设置token
     try {
-      const result = await this.write(
-        QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
-        QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
-        type === "set" ? 0x01 : 0x02,
-        "hex",
-        token
-      );
+      const result = await this.write({
+        writeCharacteristicUUID: QingUUID.BASE_WRITE_CHARACTERISTIC_UUID,
+        notifyCharacteristicUUID: QingUUID.BASE_NOTIFY_CHARACTERISTIC_UUID,
+        type:
+          type === "set"
+            ? QingCommandType.SetToken
+            : QingCommandType.VerifyToken,
+        data: token,
+      });
 
       if ("errCode" in result) {
         throw result;
@@ -309,23 +315,19 @@ export class QingBleService {
 
   /**
    * 写入数据，这里不传 serviceUUID是因为写入的服务是固定不变的
-   * @param writeCharacteristicUUID  写入数据的特征值 UUID
-   * @param type 写入数据的类型
-   * @param data 写入的数据
-   * @param format 数据格式
-   * @param isSplitReceive 是否分包接收
-   * @param noResponse 是否不需要回复
    * @returns
    */
-  private async write(
-    writeCharacteristicUUID: string,
-    notifyCharacteristicUUID: string,
-    type: number,
-    format: FormatType,
-    data?: ArrayBuffer,
-    isSplitReceive: boolean = false,
-    noResponse: boolean = false
-  ): Promise<IError | { success: boolean; data: Uint8Array }> {
+  private async write({
+    writeCharacteristicUUID,
+    notifyCharacteristicUUID = "",
+    type,
+    data,
+    noResponse = false,
+    isSplitReceive = false,
+    timeout = this.timeout,
+  }: IWriteCommandOption): Promise<
+    IError | { success: boolean; data: Uint8Array }
+  > {
     if (!this.isConnected) {
       return Promise.resolve({
         errCode: EErrorCode.Disconnected,
@@ -348,12 +350,11 @@ export class QingBleService {
           errCode: EErrorCode.Timeout,
           errMessage: "写入数据超时",
         });
-      }, this.timeout);
+      }, timeout);
       try {
         if (!noResponse) {
           this.commandMap.set(commandKey, {
             type,
-            format,
             timeoutId,
             isSplitReceive,
             resolve,
@@ -364,26 +365,23 @@ export class QingBleService {
         let writeData = data ? new Uint8Array(data) : new Uint8Array([]);
         // writeData 前面增加一个字节，用于标识数据长度
         writeData = new Uint8Array([writeData.length + 1, type, ...writeData]);
-        this.print(
-          `写入数据[${writeCharacteristicUUID}]`,
-          uint8Array2hexString(writeData)
-        );
 
+        let total = Math.ceil(writeData.length / 20);
         // 如果writeData长度超过20，则分包发送
-        if (writeData.length > 20) {
-          const total = Math.ceil(writeData.length / 20);
-          for (let i = 0; i < total; i++) {
-            const start = i * 20;
-            const end = (i + 1) * 20;
-            const currentData = writeData.slice(start, end);
-            await wx.writeBLECharacteristicValue({
-              deviceId: this.currentDevice!.deviceId,
-              serviceId: QingUUID.DEVICE_BASE_SERVICE_UUID,
-              characteristicId: writeCharacteristicUUID,
-              value: currentData,
-            });
-          }
-          return;
+        for (let i = 0; i < total; i++) {
+          const start = i * 20;
+          const end = (i + 1) * 20;
+          const currentData = writeData.slice(start, end);
+          this.print(
+            `写入数据[${writeCharacteristicUUID}]`,
+            uint8Array2hexString(currentData)
+          );
+          await wx.writeBLECharacteristicValue({
+            deviceId: this.currentDevice!.deviceId,
+            serviceId: QingUUID.DEVICE_BASE_SERVICE_UUID,
+            characteristicId: writeCharacteristicUUID,
+            value: currentData.buffer,
+          });
         }
 
         // 不需要回复的话就立即返回，比如分包发送的话 只要发送成功就可以了
@@ -395,6 +393,7 @@ export class QingBleService {
           }, 100);
         }
       } catch (error: any) {
+        this.print("写入数据出错：", error);
         // 执行失败
         resolve(error);
         // 清理定时器
@@ -594,12 +593,12 @@ export class QingBleService {
     const dataLength = valueInt8Array[0];
     let type = valueInt8Array[1];
     let data = valueInt8Array.slice(2);
-    if (type === 0xff) {
+    if (type === QingCommandType.CommandExecResult) {
       data = valueInt8Array.slice(3);
     }
 
     const commandKey = `${characteristicId}_${
-      type === 0xff ? valueInt8Array[2] : type
+      type === QingCommandType.CommandExecResult ? valueInt8Array[2] : type
     }`;
     if (!this.commandMap.has(commandKey)) {
       this.print(
@@ -610,7 +609,7 @@ export class QingBleService {
       return;
     }
     const command = this.commandMap.get(commandKey)!;
-    if (type === 0xff) {
+    if (type === QingCommandType.CommandExecResult) {
       if (data[0] === 0) {
         command.resolve({ success: true, data });
       } else {
