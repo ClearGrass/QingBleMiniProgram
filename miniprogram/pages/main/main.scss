@@ -3,4 +3,11 @@
 .add {
   height: 80rpx;
   width: 80rpx;
+
+  position: fixed;
+  bottom: 50%;
+  top: 50%;
+  left: 50%;
+  right: 50%;
+  transform: translate(-50%, -50%); 
 }

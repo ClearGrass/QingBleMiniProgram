@@ -1,3 +1,1 @@
-<view class="container" style="padding-top: 200rpx;">
-  <image class="add" src="/assets/add.png" bind:tap="onAddDevice"/>
-</view>
+<image class="add" src="/assets/add.png" bind:tap="onAddDevice"/>
