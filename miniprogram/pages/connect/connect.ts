@@ -192,7 +192,7 @@ Page<IConnectPageData, IConnectPageOption>({
         suc ? EConnectStepStatus.Success : EConnectStepStatus.Failed,
         null
       );
-      wx.showLoading({
+      wx.showToast({
         title: `Mqtt 配置设置${suc ? "成功" : "失败"}`,
       });
     };
