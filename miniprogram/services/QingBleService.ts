@@ -50,10 +50,10 @@ export class QingBleService {
 
   private onConnectStatusChange:
     | ((
-        step: EConnectStep,
-        status: EConnectStepStatus,
-        device: IQingBlueToothDevice | null
-      ) => void)
+      step: EConnectStep,
+      status: EConnectStepStatus,
+      device: IQingBlueToothDevice | null
+    ) => void)
     | null = null;
 
   constructor(
@@ -140,6 +140,7 @@ export class QingBleService {
         timeout: option.timeout || this.timeout,
       });
 
+
       // 设置连接状态
       this.isConnected = true;
       this.onConnectStatusChange?.(
@@ -152,6 +153,7 @@ export class QingBleService {
       await this.startServiceListen();
 
       const token = this.targetDeviceOption?.token || generateToken();
+      this.currentDevice.token = token
       // 设置 token
       const setTokenResult = await this.setToken(token);
       if (!setTokenResult) {
@@ -289,12 +291,15 @@ export class QingBleService {
    * @returns
    */
   public async setMqtt(mqtt: IMqttConfig): Promise<boolean> {
+    this.print('mqtt:', mqtt)
+    
     const part1 = strToBytes(
-      `${mqtt.host} ${mqtt.port} ${mqtt.username} ${mqtt.password}`
+      `${mqtt.host.trim()} ${mqtt.port} ${mqtt.username.trim()} ${mqtt.password.trim()}`
     );
     const part2 = strToBytes(
-      `${mqtt.clientId} ${mqtt.subTopic} ${mqtt.pubTopic}`
+      `${mqtt.clientId.trim()} ${mqtt.subTopic.trim()} ${mqtt.pubTopic.trim()}`
     );
+
     this.onConnectStatusChange?.(
       EConnectStep.SetMqtt,
       EConnectStepStatus.InProgress,
@@ -669,9 +674,8 @@ export class QingBleService {
       data = valueInt8Array.slice(3);
     }
 
-    const commandKey = `${characteristicId}_${
-      type === QingCommandType.CommandExecResult ? valueInt8Array[2] : type
-    }`;
+    const commandKey = `${characteristicId}_${type === QingCommandType.CommandExecResult ? valueInt8Array[2] : type
+      }`;
     if (!this.commandMap.has(commandKey)) {
       this.print(
         `未找到对应的命令:${commandKey}, 已经存命令:${Array.from(

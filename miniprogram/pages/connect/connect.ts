@@ -163,9 +163,15 @@ Page<IConnectPageData, IConnectPageOption>({
     try {
       // 连接 Wi-Fi
       const setWifiResult = await this.bleService?.setWifi(name, password);
+      if (!setWifiResult) {
+        wx.showModal({
+          title: '连接 Wi-Fi 失败',
+          showCancel: false
+        })
+        return;
+      }
       const result = await wx.showModal({
-        title: `[${name}]连接${setWifiResult ? "成功" : "失败"
-          }, 请输入MQTT配置`,
+        title: `[${name}]连接成功, 请输入MQTT配置`,
         content: JSON.stringify(this.data.mqttConfig),
         editable: true,
       });

@@ -62,6 +62,8 @@ interface IQingBlueToothDevice {
   rawData?: IWechatBlueToothDevice;
   // 广播数据
   broadcastData: string;
+  // token
+  token?: Int8Array
 }
 
 /**
