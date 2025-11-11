@@ -3,7 +3,13 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "uni-app"
+				"navigationBarTitleText": "QingBle"
+			}
+		},
+		{
+			"path": "pages/connect/connect",
+			"style": {
+				"navigationBarTitleText": "连接设备"
 			}
 		}
 	],
