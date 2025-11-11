@@ -163,7 +163,8 @@ const startConnect = async () => {
 		}
 		
 		const result = await bleService.startConnect({
-			productId: EQingProductID.PheasantS9118
+			productId: EQingProductID.PheasantS9118,
+			timeout: 60 * 1000, // 60秒超时
 		})
 		
 		if ('errCode' in result) {
@@ -188,12 +189,14 @@ const getWifiList = async () => {
 		uni.hideLoading()
 		
 		if (list.length === 0) {
-			uni.showToast({ title: '未找到WiFi', icon: 'none' })
+			uni.showToast({ title: '未找到WiFi', icon: 'none' });
+			showWifiConfig.value = false;
 		}
 	} catch (error) {
 		console.error('获取WiFi列表失败:', error)
 		uni.hideLoading()
 		uni.showToast({ title: '获取WiFi列表失败', icon: 'error' })
+		showWifiConfig.value = false;
 	}
 }
 

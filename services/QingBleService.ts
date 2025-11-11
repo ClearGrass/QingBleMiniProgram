@@ -216,9 +216,9 @@ export class QingBleService {
       );
       const result = await this.write({
         writeCharacteristicUUID:
-          QingUUID.SPARROW_PRIVATE_WRITE_CHARACTERISTIC_UUID,
+          QingUUID.PRIVATE_WRITE_CHARACTERISTIC_UUID,
         notifyCharacteristicUUID:
-          QingUUID.SPARROW_PRIVATE_NOTIFY_CHARACTERISTIC_UUID,
+          QingUUID.PRIVATE_NOTIFY_CHARACTERISTIC_UUID,
         type: QingCommandType.GetWifiList,
         isSplitReceive: true,
         timeout: 40000,
@@ -256,9 +256,9 @@ export class QingBleService {
     try {
       const result = await this.write({
         writeCharacteristicUUID:
-          QingUUID.SPARROW_PRIVATE_WRITE_CHARACTERISTIC_UUID,
+          QingUUID.PRIVATE_WRITE_CHARACTERISTIC_UUID,
         notifyCharacteristicUUID:
-          QingUUID.SPARROW_PRIVATE_NOTIFY_CHARACTERISTIC_UUID,
+          QingUUID.PRIVATE_NOTIFY_CHARACTERISTIC_UUID,
         type: QingCommandType.SetWifi,
         data: new Uint8Array(sendData),
         timeout: 60000,
@@ -496,14 +496,21 @@ export class QingBleService {
       });
       this.print("服务列表", services);
 
-      const characteristics = await uni.getBLEDeviceCharacteristics({
+
+      const _characteristics = await uni.getBLEDeviceCharacteristics({
         deviceId: this.currentDevice!.deviceId,
         serviceId: QingUUID.DEVICE_BASE_SERVICE_UUID,
       });
+
+      // 过滤出需要订阅的特征值
+      const characteristics = _characteristics.characteristics.filter((characteristic: { uuid: string; }) => {
+        return QingUUID.NOTIFY_LIST_UUIDS.includes(characteristic.uuid);
+      });
+
       this.print("特征值列表", characteristics);
 
-      // 订阅特征值
-      characteristics.characteristics.forEach(async (characteristic) => {
+      for(let i = 0; i < characteristics.length; i++) {
+        const characteristic = characteristics[i];
         if (characteristic.properties.notify) {
           await uni.notifyBLECharacteristicValueChange({
             deviceId: this.currentDevice!.deviceId,
@@ -512,7 +519,7 @@ export class QingBleService {
             state: true,
           });
         }
-      });
+      }
       this.onConnectStatusChange?.(
         EConnectStep.Subscribe,
         EConnectStepStatus.Success,
