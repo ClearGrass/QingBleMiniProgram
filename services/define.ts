@@ -24,9 +24,9 @@ export enum EQingCommandType {
   // 验证 token
   VerifyToken = 0x02,
   // 获取 Wi-Fi 列表
-  GetWifiList = 0x07,
+  GetWifiList = 0x2f,
   // 设置 Wi-Fi
-  SetWifi = 0x01,
+  SetWifi = 0x09,
 
 }
 
@@ -67,11 +67,11 @@ export enum EConnectStep {
   // 设置时间
   SetTime = 0x07,
   // 设置 Wi-Fi
-  SetWifi = 0x08,
+  SetWifi = 0x09,
   // 设置 MQTT
-  SetMqtt = 0x09,
+  SetMqtt = 0x0a,
   // 获取 Wi-Fi 列表
-  GetWifiList = 0x0a,
+  GetWifiList = 0x2f,
   Disconnected = 0x0b,
 }
 
