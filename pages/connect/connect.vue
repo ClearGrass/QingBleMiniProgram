@@ -2,7 +2,7 @@
   <view class="connect-container">
     <!-- 连接步骤 -->
     <view class="steps-section">
-			<img class="device-press-tip" src="/static/pheasant_press.png" alt="" v-if="currentStep.status === EConnectStepStatus.InProgress && connectStep.value === EConnectStep.Scan">
+			<img class="device-press-tip" src="/static/pheasant_press.png" alt="" v-if="currentStep.step === EConnectStep.Scan">
       <text class="device-mac">{{ currentDevice?.mac || "" }}</text>
       <view class="step-content">
         <uni-load-more
@@ -12,17 +12,9 @@
           :show-text="loadingStatus.showText"
           :content-text="loadingStatus.contentText"
         />
-        <view v-else class="step-icon" :class="getStepIconClass(currentStep)">
-          <text
-            class="icon"
-            v-if="currentStep.status === EConnectStepStatus.Success"
-            >✓</text
-          >
-          <text
-            class="icon"
-            v-else-if="currentStep.status === EConnectStepStatus.Failed"
-            >✗</text
-          >
+        <view v-else class="step-icon">
+					<uni-icons type="checkmarkempty" size="20" color="#4cd964"  v-if="currentStep.status === EConnectStepStatus.Success"></uni-icons>
+          <uni-icons type="closeempty" size="20" color="#ff3b30"  v-else-if="currentStep.status === EConnectStepStatus.Failed"></uni-icons>
         </view>
         <text class="step-text">{{ currentStep.text }}</text>
       </view>
@@ -143,14 +135,7 @@ const currentStep = computed(() => {
   };
 });
 
-const getStepIconClass = (step: any) => {
-  return {
-    "step-success": step.status === EConnectStepStatus.Success,
-    "step-failed": step.status === EConnectStepStatus.Failed,
-  };
-};
 
-// 方法
 const onConnectStatusChange = (
   step: EConnectStep,
   status: EConnectStepStatus,
@@ -258,9 +243,16 @@ const connectWifi = async () => {
 			// token 保存起来，如果需要切换WiFi的时候，调用bleService.startConnect的时候传 token进去，不需要长按设备就可以连接。
 			token: currentDevice.value.token, 
 		}
-		console.warn(`设备配置完成：配置信息为：${deviceInfo}, 可以将此内容保存到服务端`);
-		// 断开蓝牙
-		bleService.release()
+		console.warn('设备配置完成：配置信息为：', deviceInfo, ' 可以将此内容保存到服务端');
+		uni.showModal({
+			title: '设备配置完成',
+			content: '设备信息见控制台，可将此内容保存到服务端',
+			showCancel: false,
+		}).then(() => {
+			// 断开蓝牙
+			bleService.release()
+			uni.navigateBack()
+		})
 		
   } else {
     uni.showToast({ title: "WiFi连接失败", icon: "error" });
@@ -306,6 +298,10 @@ onUnmounted(() => {
   border-radius: 16rpx;
   padding: 30rpx;
   margin-bottom: 30rpx;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
 
   .device-mac {
     display: block;
@@ -320,49 +316,20 @@ onUnmounted(() => {
     padding: 20rpx 0;
 
     .step-icon {
-      width: 40rpx;
-      height: 40rpx;
+      width: 60rpx;
+      height: 60rpx;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-right: 20rpx;
       background: #f0f0f0;
-
-      .icon {
-        font-size: 24rpx;
-        color: #999;
-
-        &.pending {
-          color: #ccc;
-        }
-      }
     }
 
     .step-text {
       font-size: 28rpx;
       color: #333;
 			margin-left: 10rpx;
-    }
-
-    &.step-success .step-icon {
-      background: #4cd964;
-
-      .icon {
-        color: white;
-      }
-    }
-
-    &.step-failed .step-icon {
-      background: #ff3b30;
-
-      .icon {
-        color: white;
-      }
-    }
-
-    &.step-progress .step-icon {
-      background: #007aff;
     }
   }
 }
@@ -412,7 +379,7 @@ onUnmounted(() => {
 
     .wifi-signal-icon {
       height: 24rpx;
-      width: 22rpx;
+      width: 24rpx;
       margin-right: 10rpx;
     }
 
@@ -422,5 +389,11 @@ onUnmounted(() => {
       margin-right: 10rpx;
     }
   }
+}
+
+.secondary-btn {
+	background-color: #f0f0f0;
+	color: #333;
+	margin: 10rpx;
 }
 </style>

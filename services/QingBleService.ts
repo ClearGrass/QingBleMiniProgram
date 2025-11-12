@@ -231,7 +231,13 @@ export class QingBleService {
           this.currentDevice
         );
         return [];
-      }
+      } 
+
+      this.onConnectStatusChange?.(
+        EConnectStep.GetWifiList,
+        EConnectStepStatus.Success,
+        this.currentDevice
+      );
 
       this.print(
         "获取 Wi-Fi 列表成功",
