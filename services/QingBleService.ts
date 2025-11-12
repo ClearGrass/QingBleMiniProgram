@@ -225,6 +225,11 @@ export class QingBleService {
       });
       if ("errCode" in result || !result.success) {
         this.print("获取 Wi-Fi 列表失败", result);
+        this.onConnectStatusChange?.(
+          EConnectStep.GetWifiList,
+          EConnectStepStatus.Failed,
+          this.currentDevice
+        );
         return [];
       }
 
@@ -236,6 +241,11 @@ export class QingBleService {
       return parseWifiList(result.data);
     } catch (error) {
       this.print("获取 Wi-Fi 列表失败", error);
+      this.onConnectStatusChange?.(
+        EConnectStep.GetWifiList,
+        EConnectStepStatus.Failed,
+        this.currentDevice
+      );
       return [];
     }
   }
@@ -281,6 +291,11 @@ export class QingBleService {
       return true;
     } catch (error) {
       this.print("连接 Wi-Fi 失败", error);
+      this.onConnectStatusChange?.(
+        EConnectStep.SetWifi,
+        EConnectStepStatus.Failed,
+        this.currentDevice
+      );
       return false;
     }
   }
