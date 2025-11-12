@@ -1,10 +1,10 @@
 ## 本分支是基于uni-app开发的
 
-## 绑定设备类型为 青萍商用温湿度计 S 参数如下
+## 支持设备类型为 `青萍商用温湿度计 S`， 参数如下
 | 参数 | 值 |
 | --- | --- |
-| productID | CGP22w |
-| timeout | 0x5c |
+| MODEL | CGP22w |
+| PID | 0x5c |
 
 ## 使用方法如下 
 ```javascript
@@ -30,4 +30,4 @@ await bleService.release()
 
 ## [connect.vue](./pages/connect/connect.vue) 中实现了整个流程
 
-从 `onMounted` 方法中 startConnect 开始阅读
+可从 `onMounted` 方法中 startConnect 开始阅读
