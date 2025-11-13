@@ -5,3 +5,5 @@ unpackage
 node_modules
 
 old-code
+
+*.key

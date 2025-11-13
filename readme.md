@@ -1,6 +1,6 @@
-## 本分支是基于uni-app开发的
+# 本分支基于 `uni-app` 开发
 
-## 支持设备类型为 `青萍商用温湿度计 S`， 参数如下
+## 目前支持的设备类型为 `青萍商用温湿度计 S`， 参数如下
 | 参数 | 值 |
 | --- | --- |
 | MODEL | CGP22w |
@@ -15,7 +15,7 @@ const bleService = new QingBleService(onConnectStatusChange)
 // 开始连接 包括：扫描目标设备、连接设备、订阅服务、设置token、验证token
 bleService.startConnect({
   productId: EQingProductID.PheasantS9118,
-  timeout: 60 * 1000, // 超时时间 可以不传，默认超时还见
+  timeout: 60 * 1000, // 超时时间 可以不传，默认超时时间20秒
 })
 
 // 获取WiFi列表
