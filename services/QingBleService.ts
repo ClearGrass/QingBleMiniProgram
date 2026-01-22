@@ -83,7 +83,7 @@ export class QingBleService {
       }
       return (
         device.productID === this.targetDeviceOption?.productId &&
-        !device.isBind
+        device.isBind
       );
     });
 
@@ -660,7 +660,7 @@ export class QingBleService {
     const productID = byteArray[1];
     // frameControl
     const frameControl = byteArray[0];
-    const isBind = (frameControl & 0b10000000) > 0;
+    const isBind = (frameControl & 0b10) > 0;
 
     // sData 转为 hex
     const sDataHex = uint8Array2hexString(byteArray);
