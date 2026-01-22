@@ -83,7 +83,7 @@ export class QingBleService {
       }
       return (
         device.productID === this.targetDeviceOption?.productId &&
-        !device.isBind
+        device.isBind
       );
     });
 
@@ -246,6 +246,16 @@ export class QingBleService {
    * @param password  WiFi密码
    */
   public async setWifi(name: string, password: string = ""): Promise<boolean> {
+    if (password !== "" && (password.length < 8 || password.length > 63)) {
+      this.print("WiFi 密码长度必须在 8 ～ 63 之间");
+      this.onConnectStatusChange?.(
+        EConnectStep.SetWifi,
+        EConnectStepStatus.Failed,
+        this.currentDevice
+      );
+      return false;
+    }
+    
     this.onConnectStatusChange?.(
       EConnectStep.SetWifi,
       EConnectStepStatus.InProgress,
@@ -622,7 +632,7 @@ export class QingBleService {
     const productID = byteArray[1];
     // frameControl
     const frameControl = byteArray[0];
-    const isBind = (frameControl & 0b10000000) > 0;
+    const isBind = (frameControl & 0b10) > 0;
 
     // sData 转为 hex
     const sDataHex = uint8Array2hexString(byteArray);
