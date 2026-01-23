@@ -7,12 +7,34 @@
 <script>
 
 export default {
-  onLoad() {},
+  onLoad() { },
+  
   methods: {
+    permissionCheck() {
+      if (uni.getSystemInfoSync().platform !== "android") {
+        return true;
+      }
+      const authSettings = uni.getAppAuthorizeSetting()
+      if (authSettings.locationAuthorized !== 'denied') {
+        return true;
+      }
+			uni.showModal({
+			  content: "添加设备需要打开位置权限",
+			  confirmText: "去设置",
+			  success: (res) => {
+			    if (res.confirm) {
+						uni.openAppAuthorizeSetting({})
+			    }
+			  },
+			});
+      return false;
+    },
 		add() {
-			uni.navigateTo({
-				url: '/pages/connect/connect'
-			})
+      if (this.permissionCheck()) {
+        uni.navigateTo({
+          url: "/pages/connect/connect",
+        });
+      }
 		}
 	},
 };
