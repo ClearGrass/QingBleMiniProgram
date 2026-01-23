@@ -98,6 +98,8 @@ export default {
 	font-size: 32rpx;
 	box-sizing: border-box;
 	background-color: white;
+	white-space: nowrap;
+	overflow: hidden;
 }
 
 .error-text {
