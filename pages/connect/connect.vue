@@ -234,14 +234,10 @@ const selectWifi = (wifi: IWiFiItem) => {
 const connectWifi = async () => {
   if (!bleService || !selectedWifi.value) return;
 
-  uni.showLoading({ title: "连接WiFi..." });
-
   const success = await bleService.setWifi(
     selectedWifi.value.name,
     wifiPassword.value
   );
-
-  await uni.hideLoading();
 
   if (success) {
     uni.showToast({ title: "WiFi连接成功，配置完成！", icon: "success" });

@@ -4,7 +4,8 @@
  * 青萍 Product ID 定义
  */
 export enum EQingProductID {
-	PheasantS9118 = 0x5c,
+  PheasantS9118 = 0x5c,
+  PheasantCO2=	0x33
 }
 
 export type ConnectStateChangeType =

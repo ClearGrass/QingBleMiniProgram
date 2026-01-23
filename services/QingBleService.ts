@@ -298,6 +298,16 @@ export class QingBleService {
         );
         return false;
       }
+      const resultData = result.data || new Uint8Array();
+      if (resultData.length > 0 && resultData[0] !== 0x00) {
+        this.print("连接 Wi-Fi 失败", resultData);
+        this.onConnectStatusChange?.(
+          EConnectStep.SetWifi,
+          EConnectStepStatus.Failed,
+          this.currentDevice
+        );
+        return false;
+      }
       this.print("连接 Wi-Fi 成功", result);
       this.onConnectStatusChange?.(
         EConnectStep.SetWifi,

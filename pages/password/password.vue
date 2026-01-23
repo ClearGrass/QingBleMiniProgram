@@ -4,6 +4,7 @@
 			<input 
 				type="text" 
 				password 
+				auto-focus
 				:placeholder="'请输入' + wifiName + '的密码'" 
 				v-model="password"
 				class="password-input"
