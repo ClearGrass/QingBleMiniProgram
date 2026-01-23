@@ -11,6 +11,12 @@
 			"style": {
 				"navigationBarTitleText": "连接设备"
 			}
+		},
+		{
+			"path": "pages/password/password",
+			"style": {
+				"navigationBarTitleText": "输入密码"
+			}
 		}
 	],
 	"globalStyle": {

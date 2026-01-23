@@ -2,7 +2,12 @@
   <view class="connect-container">
     <!-- 连接步骤 -->
     <view class="steps-section">
-			<img class="device-press-tip" src="/static/pheasant_press.png" alt="" v-if="currentStep.step === EConnectStep.Scan">
+      <img
+        class="device-press-tip"
+        src="/static/pheasant_press.png"
+        alt=""
+        v-if="currentStep.step === EConnectStep.Scan"
+      />
       <text class="device-mac">{{ currentDevice?.mac || "" }}</text>
       <view class="step-content">
         <uni-load-more
@@ -13,8 +18,18 @@
           :content-text="loadingStatus.contentText"
         />
         <view v-else class="step-icon">
-					<uni-icons type="checkmarkempty" size="20" color="#4cd964"  v-if="currentStep.status === EConnectStepStatus.Success"></uni-icons>
-          <uni-icons type="closeempty" size="20" color="#ff3b30"  v-else-if="currentStep.status === EConnectStepStatus.Failed"></uni-icons>
+          <uni-icons
+            type="checkmarkempty"
+            size="20"
+            color="#4cd964"
+            v-if="currentStep.status === EConnectStepStatus.Success"
+          ></uni-icons>
+          <uni-icons
+            type="closeempty"
+            size="20"
+            color="#ff3b30"
+            v-else-if="currentStep.status === EConnectStepStatus.Failed"
+          ></uni-icons>
         </view>
         <text class="step-text">{{ currentStep.text }}</text>
       </view>
@@ -89,15 +104,15 @@ const showWifiConfig = ref(false);
 const connectStatus = ref<EConnectStepStatus>(EConnectStepStatus.InProgress);
 const connectStep = ref<EConnectStep>(EConnectStep.Scan);
 const loadingStatus = ref({
-	status: 'loading',
-	iconSize: 20,
-	showText: false,
-	iconType: 'circle',
-	contentText: {
-		contentdown: '',
-		contentrefresh: '',
-		contentnomore: '',
-	}
+  status: "loading",
+  iconSize: 20,
+  showText: false,
+  iconType: "circle",
+  contentText: {
+    contentdown: "",
+    contentrefresh: "",
+    contentnomore: "",
+  },
 });
 
 // BLE服务实例
@@ -134,7 +149,6 @@ const currentStep = computed(() => {
     text: description(connectStep.value),
   };
 });
-
 
 const onConnectStatusChange = (
   step: EConnectStep,
@@ -205,21 +219,16 @@ const selectWifi = (wifi: IWiFiItem) => {
     connectWifi();
     return;
   }
-  uni
-    .showModal({
-      title: `请输入"${wifi.name}"的密码`,
-      editable: true,
-      placeholderText: "输入密码",
-    })
-    .then((res) => {
-      if (res.confirm) {
-        const password = res.content || "";
-        if (password.length > 0) {
-          wifiPassword.value = password;
-          connectWifi();
-        }
-      }
-    });
+  uni.navigateTo({
+    url: `/pages/password/password?wifiName=${encodeURIComponent(wifi.name)}`,
+    success: (res) => {
+      res.eventChannel.on("password", (data: { password: string }) => {
+        console.log("wifi-password:", data);
+        wifiPassword.value = data.password;
+        connectWifi();
+      });
+    },
+  });
 };
 
 const connectWifi = async () => {
@@ -235,25 +244,30 @@ const connectWifi = async () => {
   await uni.hideLoading();
 
   if (success) {
-		uni.showToast({ title: "WiFi连接成功，配置完成！", icon: "success" });
-		const deviceInfo = {
-			wifi: selectedWifi.value.name,
-			bleMac: currentDevice.value.mac,
-			productId: currentDevice.value.productID,
-			// token 保存起来，如果需要切换WiFi的时候，调用bleService.startConnect的时候传 token进去，不需要长按设备就可以连接。
-			token: currentDevice.value.token, 
-		}
-		console.warn('设备配置完成：配置信息为：', deviceInfo, ' 可以将此内容保存到服务端');
-		uni.showModal({
-			title: '设备配置完成',
-			content: '设备信息见控制台，可将此内容保存到服务端',
-			showCancel: false,
-		}).then(() => {
-			// 断开蓝牙
-			bleService.release()
-			uni.navigateBack()
-		})
-		
+    uni.showToast({ title: "WiFi连接成功，配置完成！", icon: "success" });
+    const deviceInfo = {
+      wifi: selectedWifi.value.name,
+      bleMac: currentDevice.value.mac,
+      productId: currentDevice.value.productID,
+      // token 保存起来，如果需要切换WiFi的时候，调用bleService.startConnect的时候传 token进去，不需要长按设备就可以连接。
+      token: currentDevice.value.token,
+    };
+    console.warn(
+      "设备配置完成：配置信息为：",
+      deviceInfo,
+      " 可以将此内容保存到服务端"
+    );
+    uni
+      .showModal({
+        title: "设备配置完成",
+        content: "设备信息见控制台，可将此内容保存到服务端",
+        showCancel: false,
+      })
+      .then(() => {
+        // 断开蓝牙
+        bleService.release();
+        uni.navigateBack();
+      });
   } else {
     uni.showToast({ title: "WiFi连接失败", icon: "error" });
   }
@@ -289,8 +303,8 @@ onUnmounted(() => {
 }
 
 .device-press-tip {
-	width: 60vw;
-	height: 60vw;
+  width: 60vw;
+  height: 60vw;
 }
 
 .steps-section {
@@ -298,10 +312,10 @@ onUnmounted(() => {
   border-radius: 16rpx;
   padding: 30rpx;
   margin-bottom: 30rpx;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	flex-direction: column;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
 
   .device-mac {
     display: block;
@@ -329,7 +343,7 @@ onUnmounted(() => {
     .step-text {
       font-size: 28rpx;
       color: #333;
-			margin-left: 10rpx;
+      margin-left: 10rpx;
     }
   }
 }
@@ -392,8 +406,8 @@ onUnmounted(() => {
 }
 
 .secondary-btn {
-	background-color: #f0f0f0;
-	color: #333;
-	margin: 10rpx;
+  background-color: #f0f0f0;
+  color: #333;
+  margin: 10rpx;
 }
 </style>

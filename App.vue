@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { EConnectStep, EConnectStepStatus, EQingProductID, IQingBlueToothDevice } from './services/define';
-import { QingBleService } from './services/QingBleService';
-	export default {
+		export default {
 		onLaunch: function() {	
 			
 		},
